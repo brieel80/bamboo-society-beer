@@ -119,9 +119,34 @@ body::before{
   background:var(--bg-page);
   border-bottom:1px solid var(--line);
 }
+/* animated "swipe →" hint on the category bar; hidden for good once user scrolls it */
+.nav-hint{
+  position:absolute; right:0; top:0; bottom:1px;
+  display:flex; align-items:center; justify-content:flex-end;
+  width:64px; padding-right:9px;
+  pointer-events:none;
+  background:linear-gradient(to right, rgba(232,221,198,0), var(--bg-page) 58%);
+  transition:opacity .45s ease;
+}
+.nav-hint.hide{ opacity:0; }
+.nav-hint-badge{
+  width:30px; height:30px; border-radius:50%;
+  background:var(--amber); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,0.22);
+  animation:navNudge 1.25s ease-in-out infinite;
+}
+.nav-hint-badge svg{ width:17px; height:17px; display:block; }
+@keyframes navNudge{
+  0%,100%{ transform:translateX(0); box-shadow:0 2px 8px rgba(0,0,0,0.22); }
+  50%{ transform:translateX(5px); box-shadow:0 2px 12px rgba(180,113,46,0.5); }
+}
+@media (prefers-reduced-motion: reduce){
+  .nav-hint-badge{ animation:none; }
+}
+.cat-nav-inner{ position:relative; max-width:1180px; margin:0 auto; }
 .cat-nav{
   display:flex; gap:8px; overflow-x:auto; padding:12px 20px;
-  max-width:1180px; margin:0 auto;
   scrollbar-width:thin; scrollbar-color:var(--amber) transparent;
 }
 .cat-nav::-webkit-scrollbar{ height:5px; }
@@ -420,7 +445,14 @@ a:focus-visible, button:focus-visible, .cat-pill:focus-visible{
 </header>
 
 <div class="cat-nav-wrap">
-  <nav class="cat-nav" id="catNav" aria-label="Categorias do cardápio"></nav>
+  <div class="cat-nav-inner">
+    <nav class="cat-nav" id="catNav" aria-label="Categorias do cardápio"></nav>
+    <div class="nav-hint" id="navHint" aria-hidden="true">
+      <span class="nav-hint-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </span>
+    </div>
+  </div>
 </div>
 
 <div class="offcanvas offcanvas-end bamboo-off" tabindex="-1" id="siteOffcanvas" aria-labelledby="siteOffcanvasLabel">
@@ -1876,6 +1908,32 @@ document.addEventListener('click', (ev) => {
   if(!link) return;
   ev.preventDefault();
   scrollToCategory(link.dataset.cat);
+});
+
+/* ---------------- "Deslize →" hint on the category bar ---------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const hint = document.getElementById('navHint');
+  const nav = document.getElementById('catNav');
+  if(!hint || !nav) return;
+  const SEEN_KEY = 'bambooNavHintSeen';
+
+  // Already learned on this device, or bar isn't scrollable → don't show at all.
+  if(localStorage.getItem(SEEN_KEY) || nav.scrollWidth <= nav.clientWidth + 4){
+    hint.remove();
+    return;
+  }
+
+  let done = false;
+  const dismiss = () => {
+    if(done) return;
+    done = true;
+    localStorage.setItem(SEEN_KEY, '1');
+    hint.classList.add('hide');
+    nav.removeEventListener('scroll', onScroll);
+    setTimeout(() => hint.remove(), 500);
+  };
+  const onScroll = () => { if(nav.scrollLeft > 8) dismiss(); };
+  nav.addEventListener('scroll', onScroll, { passive:true });
 });
 
 </script>
