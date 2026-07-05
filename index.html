@@ -1507,8 +1507,10 @@ window.__decoTomato = "data:image/webp;base64,UklGRthbAABXRUJQVlA4WAoAAAAQAAAAvg
    ============================================================ */
 
 const STORAGE_KEY = 'bambooMenuData_v2';
-const AUTH_KEY = 'bambooAdminAuth_v1';
 const SESSION_KEY = 'bambooAdminSession_v1';
+// Login de admin: guardamos APENAS o hash SHA-256 de "usuario:senha".
+// A senha em texto nunca fica no código. (Obfuscação — não é segurança real; veja aviso.)
+const AUTH_HASH = 'd4c2ff776ff395f804ac254208d092668330588070ec6968f304f233d7a3ddd8';
 
 const COL_LABELS = {
   unico: '', p1:'1 pessoa', p2:'2 pessoas',
@@ -1541,10 +1543,9 @@ function saveMenuData(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(menuData));
 }
 
-function ensureAuthSeed(){
-  if(!localStorage.getItem(AUTH_KEY)){
-    localStorage.setItem(AUTH_KEY, JSON.stringify({user:'admin', pass:'bamboo2026'}));
-  }
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
 function isLoggedIn(){
@@ -1683,9 +1684,9 @@ function setEditMode(on){
 }
 
 /* ---------------- Auth ---------------- */
-function attemptLogin(user, pass){
-  const auth = JSON.parse(localStorage.getItem(AUTH_KEY));
-  if(user === auth.user && pass === auth.pass){
+async function attemptLogin(user, pass){
+  const hash = await sha256Hex(user + ':' + pass);
+  if(hash === AUTH_HASH){
     sessionStorage.setItem(SESSION_KEY, '1');
     return true;
   }
@@ -1817,7 +1818,6 @@ function resetToDefault(){
 document.addEventListener('DOMContentLoaded', () => {
   loadDefaultData();
   loadMenuData();
-  ensureAuthSeed();
   renderAll();
 
   document.getElementById('info-hours').textContent = menuData.info.hours;
@@ -1830,12 +1830,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('adminBar').classList.add('show');
   }
 
-  document.getElementById('loginForm').addEventListener('submit', (ev)=>{
+  document.getElementById('loginForm').addEventListener('submit', async (ev)=>{
     ev.preventDefault();
     const user = document.getElementById('loginUser').value.trim();
     const pass = document.getElementById('loginPass').value;
     const err = document.getElementById('loginError');
-    if(attemptLogin(user, pass)){
+    if(await attemptLogin(user, pass)){
       err.style.display = 'none';
       bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
       document.getElementById('loginForm').reset();
