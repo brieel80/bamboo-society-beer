@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no">
 <title>Bamboo Society Beer — Cardápio</title>
 <meta name="description" content="Cardápio digital do Bamboo Society Beer.">
 
@@ -1840,6 +1841,8 @@ document.addEventListener('DOMContentLoaded', () => {
       bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
       document.getElementById('loginForm').reset();
       document.getElementById('adminBar').classList.add('show');
+      const off = bootstrap.Offcanvas.getInstance(document.getElementById('siteOffcanvas'));
+      if(off) off.hide();
     } else {
       err.style.display = 'block';
     }
